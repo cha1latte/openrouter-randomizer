@@ -1,0 +1,148 @@
+#openrouter-randomizer-settings {
+    margin-bottom: 1rem;
+}
+
+.openrouter-randomizer-block {
+    padding: 10px;
+}
+
+.openrouter-settings-group {
+    margin: 15px 0;
+}
+
+.openrouter-settings-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.openrouter-settings-group .flex-container {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.openrouter-settings-group input.text_pole {
+    flex: 1;
+}
+
+.openrouter-models-section {
+    margin-top: 20px;
+}
+
+.openrouter-models-section h4 {
+    margin-bottom: 10px;
+}
+
+.model-list-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid;
+    border-radius: 10px;
+    padding: 10px;
+    /* Use the same styling as text_pole inputs */
+    background-color: var(--black70);
+    border-color: var(--greyCACACA);
+    color: var(--SmartThemeEmColor);
+    font-family: var(--mainFontFamily, 'Source Sans Pro', sans-serif);
+}
+
+.model-item {
+    margin: 2px 0;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+/* Alternating row colors for better readability */
+.model-item:nth-child(even) {
+    background-color: var(--SmartThemeBlurTintColor, rgba(0, 0, 0, 0.02));
+}
+
+/* Enhanced hover effect */
+.model-item:hover {
+    background-color: var(--SmartThemeBlurTintColor, rgba(0, 0, 0, 0.08)) !important;
+    transform: translateY(-1px);
+}
+
+.model-item label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    min-height: 20px;
+}
+
+.model-item label:hover {
+    background-color: var(--SmartThemeBlurTintColor, rgba(0, 0, 0, 0.05));
+}
+
+.model-checkbox {
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.model-item span {
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--SmartThemeEmColor);
+    word-break: break-word;
+}
+
+/* Model controls styling */
+.model-controls {
+    display: flex !important;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.model-controls button {
+    flex: 0 0 auto;
+}
+
+/* Remove old dark theme overrides since we're using the same vars as text inputs */
+
+/* Cost-based highlighting */
+.model-item[data-cost-tier="expensive"] strong {
+    color: var(--SmartThemeEmColor, #ff6b6b);
+}
+
+.model-item[data-cost-tier="free"] strong {
+    color: var(--SmartThemeQuoteColor, #51cf66);
+}
+
+.model-item[data-cost-tier="cheap"] strong {
+    color: var(--SmartThemeEmColor, #4c9eff);
+}
+
+/* Search input enhancements */
+#model-search {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#model-search:focus {
+    border-color: var(--SmartThemeEmColor, #4c9eff) !important;
+    box-shadow: 0 0 0 2px var(--SmartThemeBlurTintColor, rgba(76, 158, 255, 0.2));
+    outline: none;
+}
+
+/* Selected model highlighting */
+.model-item input[type="checkbox"]:checked ~ span strong {
+    color: var(--SmartThemeEmColor, #4c9eff);
+}
+
+/* Responsive design */
+@media (max-width: 600px) {
+    .openrouter-settings-group .flex-container {
+        flex-direction: column;
+    }
+    
+    .openrouter-settings-group input.text_pole {
+        width: 100%;
+    }
+    
+    #fetch-models-btn {
+        width: 100%;
+    }
+}

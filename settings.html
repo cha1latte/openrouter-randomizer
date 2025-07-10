@@ -1,0 +1,38 @@
+<div id="openrouter-randomizer-settings" class="inline-drawer">
+    <div class="inline-drawer-toggle inline-drawer-header">
+        <b>OpenRouter Randomizer</b>
+        <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+    </div>
+    <div class="inline-drawer-content">
+        <div class="openrouter-randomizer-block">
+            <div class="toggle-description">
+                <label class="checkbox_label" for="openrouter-randomizer-enabled">
+                    <input id="openrouter-randomizer-enabled" type="checkbox" />
+                    <span>Enable OpenRouter Model Randomizer</span>
+                </label>
+            </div>
+            
+            <div class="openrouter-settings-group">
+                <small class="notes">Randomly selects a model from your chosen list for each generation to help avoid repeating patterns and phrases before they happen.</small>
+                <small class="notes">Uses your OpenRouter API key from API Connections settings.</small>
+            </div>
+            
+            <div class="openrouter-models-section">
+                <h4>Available Models</h4>
+                <div class="model-controls" style="margin-bottom: 10px; display: none;">
+                    <div style="margin-bottom: 10px;">
+                        <input type="text" id="model-search" placeholder="🔍 Search models (e.g., gpt-4, mistral, claude...)" 
+                               style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: var(--SmartThemeBodyColor, #222); color: var(--SmartThemeEmColor, #fff); border-color: var(--SmartThemeBorderColor, #ccc);">
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button id="select-all-btn" class="menu_button">Select All</button>
+                        <button id="deselect-all-btn" class="menu_button">Deselect All</button>
+                    </div>
+                </div>
+                <div id="model-list-container" class="model-list-container">
+                    <p>Click "Fetch Models" to load available models.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
