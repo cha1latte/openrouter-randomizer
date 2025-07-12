@@ -226,47 +226,6 @@ const MODULE_NAME = 'openrouter-randomizer';
             // Automatically fetch models when the extension loads
             fetchModels();
             
-            // Set up last used model display
-            updateLastUsedModelDisplay(root);
-            updateBlockedModelsDisplay(root);
-            
-            // Update the display every 5 seconds to keep it current
-            setInterval(() => {
-                updateLastUsedModelDisplay(root);
-                updateBlockedModelsDisplay(root);
-            }, 5000);
-            
-            // Wire up block model functionality
-            const blockLastModelBtn = root.querySelector('#block-last-model-btn');
-            if (blockLastModelBtn) {
-                blockLastModelBtn.addEventListener('click', () => {
-                    const lastUsedModel = localStorage.getItem('orr_last_used_model');
-                    if (lastUsedModel) {
-                        blockModel(lastUsedModel);
-                        updateLastUsedModelDisplay(root);
-                        updateBlockedModelsDisplay(root);
-                        
-                        // Show notification
-                        if (window.toastr) {
-                            window.toastr.warning(`Blocked model: ${lastUsedModel}`, 'OpenRouter Randomizer');
-                        }
-                    }
-                });
-            }
-            
-            // Wire up clear blocked models button
-            const clearBlockedBtn = root.querySelector('#clear-blocked-btn');
-            if (clearBlockedBtn) {
-                clearBlockedBtn.addEventListener('click', () => {
-                    clearBlockedModels();
-                    updateBlockedModelsDisplay(root);
-                    
-                    // Show notification
-                    if (window.toastr) {
-                        window.toastr.info('Cleared all blocked models', 'OpenRouter Randomizer');
-                    }
-                });
-            }
 
             // Wire up the search filter
             const searchInput = root.querySelector('#model-search');
@@ -431,99 +390,6 @@ const MODULE_NAME = 'openrouter-randomizer';
             localStorage.setItem(KEY, JSON.stringify(ids));
         }
 
-        // Storage helpers for blocked models
-        const BLOCKED_KEY = 'orr_blocked';
-        function getBlockedModels() {
-            return JSON.parse(localStorage.getItem(BLOCKED_KEY) || '[]');
-        }
-        function blockModel(modelId) {
-            const blocked = getBlockedModels();
-            if (!blocked.includes(modelId)) {
-                blocked.push(modelId);
-                localStorage.setItem(BLOCKED_KEY, JSON.stringify(blocked));
-            }
-        }
-        function clearBlockedModels() {
-            localStorage.setItem(BLOCKED_KEY, JSON.stringify([]));
-        }
-        function isModelBlocked(modelId) {
-            return getBlockedModels().includes(modelId);
-        }
-
-        // Function to update the last used model display
-        function updateLastUsedModelDisplay(root) {
-            const displayElement = root.querySelector('#last-used-model-display');
-            const nameElement = root.querySelector('#last-used-model-name');
-            const timeElement = root.querySelector('#last-used-model-time');
-            
-            if (!displayElement || !nameElement || !timeElement) {
-                return;
-            }
-            
-            const lastUsedModel = localStorage.getItem('orr_last_used_model');
-            const lastUsedTime = localStorage.getItem('orr_last_used_time');
-            
-            if (lastUsedModel && lastUsedTime) {
-                const time = new Date(parseInt(lastUsedTime));
-                const timeAgo = getTimeAgo(time);
-                
-                nameElement.textContent = lastUsedModel;
-                timeElement.textContent = `Used ${timeAgo}`;
-                displayElement.style.display = 'block';
-            } else {
-                displayElement.style.display = 'none';
-            }
-        }
-        
-        // Helper function to format time ago
-        function getTimeAgo(date) {
-            const now = new Date();
-            const diffMs = now - date;
-            const diffSecs = Math.floor(diffMs / 1000);
-            const diffMins = Math.floor(diffSecs / 60);
-            const diffHours = Math.floor(diffMins / 60);
-            const diffDays = Math.floor(diffHours / 24);
-            
-            if (diffSecs < 60) {
-                return 'just now';
-            } else if (diffMins < 60) {
-                return `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`;
-            } else if (diffHours < 24) {
-                return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
-            } else {
-                return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
-            }
-        }
-        
-        // Function to update the blocked models display
-        function updateBlockedModelsDisplay(root) {
-            const blockedInfo = root.querySelector('#blocked-models-info');
-            const blockedList = root.querySelector('#blocked-models-list');
-            
-            if (!blockedInfo || !blockedList) {
-                return;
-            }
-            
-            const blocked = getBlockedModels();
-            
-            if (blocked.length > 0) {
-                const shortNames = blocked.map(model => {
-                    // Shorten model names for display
-                    const parts = model.split('/');
-                    return parts.length > 1 ? parts[parts.length - 1] : model;
-                }).slice(0, 3); // Show max 3 models
-                
-                let displayText = shortNames.join(', ');
-                if (blocked.length > 3) {
-                    displayText += ` (+${blocked.length - 3} more)`;
-                }
-                
-                blockedList.textContent = displayText;
-                blockedInfo.style.display = 'block';
-            } else {
-                blockedInfo.style.display = 'none';
-            }
-        }
 
         // Core randomization function
         function getRandomModel() {
@@ -533,17 +399,8 @@ const MODULE_NAME = 'openrouter-randomizer';
                 return null;
             }
             
-            // Filter out blocked models
-            const blockedModels = getBlockedModels();
-            const availableModels = selectedModels.filter(model => !blockedModels.includes(model));
-            
-            if (availableModels.length === 0) {
-                console.warn(`[${MODULE_NAME}] All selected models are blocked`);
-                return null;
-            }
-            
-            const randomIndex = Math.floor(Math.random() * availableModels.length);
-            return availableModels[randomIndex];
+            const randomIndex = Math.floor(Math.random() * selectedModels.length);
+            return selectedModels[randomIndex];
         }
 
         // Function to trigger randomization and update SillyTavern's model selection
@@ -610,15 +467,11 @@ const MODULE_NAME = 'openrouter-randomizer';
                 const chosen = JSON.parse(localStorage.getItem(KEY) || '[]');
                 const pool = chosen.length ? chosen : JSON.parse(localStorage.getItem('orr_all')||'[]');
                 
-                // Filter out blocked models
-                const blockedModels = getBlockedModels();
-                const availablePool = pool.filter(model => !blockedModels.includes(model));
-                
-                if (!availablePool.length) {
+                if (!pool.length) {
                     return;
                 }
 
-                const pick = availablePool[Math.floor(Math.random() * availablePool.length)];
+                const pick = pool[Math.floor(Math.random() * pool.length)];
                 
                 // Store the randomized model for API interception
                 window.openrouterRandomizerModel = pick;
@@ -666,10 +519,6 @@ const MODULE_NAME = 'openrouter-randomizer';
                                 options.body = JSON.stringify(body);
                                 args[1] = options;
                                 
-                                // Store the model that was actually used for this request
-                                localStorage.setItem('orr_last_used_model', randomizedModel);
-                                localStorage.setItem('orr_last_used_time', Date.now().toString());
-                                
                                 
                             } catch (e) {
                                 // Return original request if modification fails
@@ -693,12 +542,9 @@ const MODULE_NAME = 'openrouter-randomizer';
                         const pool = chosen.length ? chosen : JSON.parse(allRaw);
                         
                         const failedModel = window.openrouterRandomizerModel;
-                        const blockedModels = getBlockedModels();
                         
-                        // Filter out the failed model, blocked models, and try others
-                        const availableModels = pool.filter(model => 
-                            model !== failedModel && !blockedModels.includes(model)
-                        );
+                        // Filter out the failed model and try others
+                        const availableModels = pool.filter(model => model !== failedModel);
                         
                         // Try up to 3 different models
                         for (let attempt = 0; attempt < Math.min(3, availableModels.length); attempt++) {
@@ -720,9 +566,6 @@ const MODULE_NAME = 'openrouter-randomizer';
                                     // Try the request with the new model
                                     const retryResponse = await originalFetch(url, retryOptions);
                                     
-                                    // If successful, store this model as the last used
-                                    localStorage.setItem('orr_last_used_model', retryModel);
-                                    localStorage.setItem('orr_last_used_time', Date.now().toString());
                                     
                                     return retryResponse;
                                 }
@@ -945,16 +788,12 @@ const MODULE_NAME = 'openrouter-randomizer';
                     const chosen = JSON.parse(chosenRaw);
                     const pool = chosen.length ? chosen : JSON.parse(allRaw);
                     
-                    // Filter out blocked models
-                    const blockedModels = getBlockedModels();
-                    const availablePool = pool.filter(model => !blockedModels.includes(model));
-                    
-                    if (!availablePool.length) {
+                    if (!pool.length) {
                         handlerRunning = false;
                         return;
                     }
                     
-                    const pick = availablePool[Math.floor(Math.random() * availablePool.length)];
+                    const pick = pool[Math.floor(Math.random() * pool.length)];
                     
                     // Store the selected model for API interception
                     window.openrouterRandomizerModel = pick;
@@ -1044,15 +883,11 @@ const MODULE_NAME = 'openrouter-randomizer';
                                     const chosen = JSON.parse(chosenRaw);
                                     const pool = chosen.length ? chosen : JSON.parse(allRaw);
                                     
-                                    // Filter out blocked models
-                                    const blockedModels = getBlockedModels();
-                                    const availablePool = pool.filter(model => !blockedModels.includes(model));
-                                    
-                                    if (!availablePool.length) {
+                                    if (!pool.length) {
                                         return;
                                     }
                                     
-                                    const pick = availablePool[Math.floor(Math.random() * availablePool.length)];
+                                    const pick = pool[Math.floor(Math.random() * pool.length)];
                                     
                                     // Store the selected model for API interception
                                     window.openrouterRandomizerModel = pick;

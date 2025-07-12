@@ -131,10 +131,6 @@
     outline: none;
 }
 
-/* Selected model highlighting */
-.model-item input[type="checkbox"]:checked ~ span strong {
-    color: var(--SmartThemeEmColor, #4c9eff);
-}
 
 /* Responsive design */
 @media (max-width: 600px) {
