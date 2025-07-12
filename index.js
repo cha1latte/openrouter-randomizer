@@ -173,6 +173,28 @@ const MODULE_NAME = 'openrouter-randomizer';
                 });
             }
 
+            // Wire up the notifications toggle checkbox
+            const notificationsCheckbox = root.querySelector('#openrouter-randomizer-notifications');
+            if (notificationsCheckbox) {
+                // Default to enabled if not set
+                notificationsCheckbox.checked = settings.showNotifications !== false;
+                
+                notificationsCheckbox.addEventListener('change', () => {
+                    settings.showNotifications = notificationsCheckbox.checked;
+                    
+                    // Save using our localStorage function
+                    saveSettings(settings);
+                    
+                    // Also try SillyTavern's saveSettingsDebounced if available
+                    if (typeof saveSettingsDebounced === 'function') {
+                        saveSettingsDebounced();
+                    }
+                    if (typeof window.saveSettingsDebounced === 'function') {
+                        window.saveSettingsDebounced();
+                    }
+                });
+            }
+
             // Function to fetch models from OpenRouter
             const fetchModels = async () => {
                 // Try to get API key from SillyTavern's secret storage
@@ -390,6 +412,14 @@ const MODULE_NAME = 'openrouter-randomizer';
             localStorage.setItem(KEY, JSON.stringify(ids));
         }
 
+        // Helper function to show notifications if enabled
+        function showNotification(message, title = 'OpenRouter Randomizer') {
+            const settings = loadSettings();
+            if (settings.showNotifications !== false && window.toastr) {
+                window.toastr.info(message, title);
+            }
+        }
+
 
         // Core randomization function
         function getRandomModel() {
@@ -442,10 +472,8 @@ const MODULE_NAME = 'openrouter-randomizer';
                 
                 console.log(`[${MODULE_NAME}] Model randomized: ${prevModel} → ${randomModelId}`);
                 
-                // Optional: Show toast notification
-                if (window.toastr) {
-                    window.toastr.info(`Model randomized to: ${randomModelId}`, 'OpenRouter Randomizer');
-                }
+                // Show toast notification if enabled
+                showNotification(`Model randomized to: ${randomModelId}`);
                 
             } catch (error) {
                 console.error(`[${MODULE_NAME}] Error during randomization:`, error);
@@ -518,6 +546,9 @@ const MODULE_NAME = 'openrouter-randomizer';
                                 body.model = randomizedModel;
                                 options.body = JSON.stringify(body);
                                 args[1] = options;
+                                
+                                // Show notification for the model change
+                                showNotification(`Using model: ${randomizedModel}`);
                                 
                                 
                             } catch (e) {
