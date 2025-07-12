@@ -5,8 +5,8 @@
     "optional": [],
     "js": "index.js",
     "css": "style.css",
-    "author": "Your Name",
+    "author": "cha1latte",
     "version": "1.0.0",
-    "homePage": "https://github.com/yourusername/openrouter-randomizer",
+    "homePage": "https://github.com/cha1latte/openrouter-randomizer",
     "generate_interceptor": "openrouterRandomizerInterceptor"
 }

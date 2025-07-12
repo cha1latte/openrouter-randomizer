@@ -3,6 +3,22 @@ const MODULE_NAME = 'openrouter-randomizer';
 
 (async () => {
     try {
+        // Suppress all secret-related warnings globally
+        const originalWarn = console.warn;
+        const suppressedWarnings = [
+            'allowKeysExposure',
+            'Cannot fetch secrets',
+            'config.yaml',
+            'allowKeysExposure in config.yaml is set to true'
+        ];
+        
+        console.warn = (...args) => {
+            const message = args.join(' ');
+            const shouldSuppress = suppressedWarnings.some(warning => message.includes(warning));
+            if (!shouldSuppress) {
+                originalWarn.apply(console, args);
+            }
+        };
         /* -------------------------------------------------------
            1.  Import extension API and secret management
            ------------------------------------------------------- */
@@ -62,23 +78,71 @@ const MODULE_NAME = 'openrouter-randomizer';
         /* -------------------------------------------------------
            3.  Load and inject the template manually
            ------------------------------------------------------- */
-        const response = await fetch('/scripts/extensions/openrouter-randomizer/settings.html');
-        const templateContent = await response.text();
         
-        const extensionsContainer = document.getElementById('extensions_settings');
-        if (extensionsContainer) {
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = templateContent;
-            
-            const extensionDiv = tempDiv.querySelector('#openrouter-randomizer-settings');
-            if (extensionDiv) {
-                extensionsContainer.appendChild(extensionDiv);
-                setupUI(extensionDiv);
-            } else {
-                console.error(`[${MODULE_NAME}] Extension div not found in template`);
+        // Try multiple possible paths for the template
+        const templatePaths = [
+            '/scripts/extensions/openrouter-randomizer/settings.html',
+            '/scripts/extensions/third-party/openrouter-randomizer/settings.html',
+            './settings.html'
+        ];
+        
+        let templateContent = '';
+        let templateLoaded = false;
+        
+        for (const path of templatePaths) {
+            try {
+                const response = await fetch(path);
+                if (response.ok) {
+                    templateContent = await response.text();
+                    templateLoaded = true;
+                    break;
+                }
+            } catch (error) {
+                // Continue to next path
             }
-        } else {
-            console.error(`[${MODULE_NAME}] Extensions container not found`);
+        }
+        
+        if (!templateLoaded) {
+            console.error(`[${MODULE_NAME}] Could not load template from any path`);
+            return;
+        }
+        
+        // Function to try setting up the UI
+        const trySetupUI = () => {
+            const extensionsContainer = document.getElementById('extensions_settings');
+            if (extensionsContainer) {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = templateContent;
+                
+                const extensionDiv = tempDiv.querySelector('#openrouter-randomizer-settings');
+                if (extensionDiv) {
+                    extensionsContainer.appendChild(extensionDiv);
+                    setupUI(extensionDiv);
+                    return true;
+                } else {
+                    console.error(`[${MODULE_NAME}] Extension div not found in template`);
+                }
+            } else {
+                console.error(`[${MODULE_NAME}] Extensions container not found, retrying...`);
+                return false;
+            }
+            return false;
+        };
+        
+        // Try to set up UI immediately
+        if (!trySetupUI()) {
+            // If it fails, retry a few times with delays
+            let retryCount = 0;
+            const maxRetries = 10;
+            const retryInterval = setInterval(() => {
+                retryCount++;
+                if (trySetupUI() || retryCount >= maxRetries) {
+                    clearInterval(retryInterval);
+                    if (retryCount >= maxRetries) {
+                        console.error(`[${MODULE_NAME}] Failed to set up UI after ${maxRetries} attempts`);
+                    }
+                }
+            }, 500);
         }
 
         /* -------------------------------------------------------
@@ -161,6 +225,48 @@ const MODULE_NAME = 'openrouter-randomizer';
 
             // Automatically fetch models when the extension loads
             fetchModels();
+            
+            // Set up last used model display
+            updateLastUsedModelDisplay(root);
+            updateBlockedModelsDisplay(root);
+            
+            // Update the display every 5 seconds to keep it current
+            setInterval(() => {
+                updateLastUsedModelDisplay(root);
+                updateBlockedModelsDisplay(root);
+            }, 5000);
+            
+            // Wire up block model functionality
+            const blockLastModelBtn = root.querySelector('#block-last-model-btn');
+            if (blockLastModelBtn) {
+                blockLastModelBtn.addEventListener('click', () => {
+                    const lastUsedModel = localStorage.getItem('orr_last_used_model');
+                    if (lastUsedModel) {
+                        blockModel(lastUsedModel);
+                        updateLastUsedModelDisplay(root);
+                        updateBlockedModelsDisplay(root);
+                        
+                        // Show notification
+                        if (window.toastr) {
+                            window.toastr.warning(`Blocked model: ${lastUsedModel}`, 'OpenRouter Randomizer');
+                        }
+                    }
+                });
+            }
+            
+            // Wire up clear blocked models button
+            const clearBlockedBtn = root.querySelector('#clear-blocked-btn');
+            if (clearBlockedBtn) {
+                clearBlockedBtn.addEventListener('click', () => {
+                    clearBlockedModels();
+                    updateBlockedModelsDisplay(root);
+                    
+                    // Show notification
+                    if (window.toastr) {
+                        window.toastr.info('Cleared all blocked models', 'OpenRouter Randomizer');
+                    }
+                });
+            }
 
             // Wire up the search filter
             const searchInput = root.querySelector('#model-search');
@@ -223,6 +329,29 @@ const MODULE_NAME = 'openrouter-randomizer';
                 });
             }
 
+            // Wire up the select free only button
+            const selectFreeBtn = root.querySelector('#select-free-btn');
+            if (selectFreeBtn) {
+                selectFreeBtn.addEventListener('click', () => {
+                    const container = root.querySelector('#model-list-container');
+                    const visibleItems = container.querySelectorAll('.model-item:not([style*="display: none"])');
+                    
+                    visibleItems.forEach(item => {
+                        const checkbox = item.querySelector('input[type="checkbox"]');
+                        if (checkbox) {
+                            // Check if this model is free (has data-cost-tier="free")
+                            const isFree = item.getAttribute('data-cost-tier') === 'free';
+                            checkbox.checked = isFree;
+                        }
+                    });
+                    
+                    // Trigger change event to save selections
+                    if (container.onchange) {
+                        container.onchange();
+                    }
+                });
+            }
+
 
 
         }
@@ -263,24 +392,12 @@ const MODULE_NAME = 'openrouter-randomizer';
                     }
                 }
                 
-                // Method 3: Try accessing from SillyTavern's secret storage (suppress console warnings)
+                // Method 3: Try accessing from SillyTavern's secret storage
                 try {
-                    // Temporarily suppress console.warn to hide the allowKeysExposure warning
-                    const originalWarn = console.warn;
-                    console.warn = (...args) => {
-                        const message = args.join(' ');
-                        if (!message.includes('allowKeysExposure') && !message.includes('Cannot fetch secrets')) {
-                            originalWarn.apply(console, args);
-                        }
-                    };
-                    
                     const secretsModule = await import('/scripts/secrets.js');
                     await readSecretState();
                     const currentSecretState = secretsModule.secret_state;
                     const openRouterSecrets = currentSecretState[SECRET_KEYS.OPENROUTER];
-                    
-                    // Restore original console.warn
-                    console.warn = originalWarn;
                     
                     if (openRouterSecrets && Array.isArray(openRouterSecrets)) {
                         const activeSecret = openRouterSecrets.find(secret => secret.active);
@@ -295,10 +412,7 @@ const MODULE_NAME = 'openrouter-randomizer';
                         }
                     }
                 } catch (secretError) {
-                    // Make sure to restore console.warn even if there's an error
-                    if (console.warn !== console.warn.bind(console)) {
-                        console.warn = console.warn.bind(console);
-                    }
+                    // Silent error handling for secret access
                 }
                 
                 return null;
@@ -317,6 +431,100 @@ const MODULE_NAME = 'openrouter-randomizer';
             localStorage.setItem(KEY, JSON.stringify(ids));
         }
 
+        // Storage helpers for blocked models
+        const BLOCKED_KEY = 'orr_blocked';
+        function getBlockedModels() {
+            return JSON.parse(localStorage.getItem(BLOCKED_KEY) || '[]');
+        }
+        function blockModel(modelId) {
+            const blocked = getBlockedModels();
+            if (!blocked.includes(modelId)) {
+                blocked.push(modelId);
+                localStorage.setItem(BLOCKED_KEY, JSON.stringify(blocked));
+            }
+        }
+        function clearBlockedModels() {
+            localStorage.setItem(BLOCKED_KEY, JSON.stringify([]));
+        }
+        function isModelBlocked(modelId) {
+            return getBlockedModels().includes(modelId);
+        }
+
+        // Function to update the last used model display
+        function updateLastUsedModelDisplay(root) {
+            const displayElement = root.querySelector('#last-used-model-display');
+            const nameElement = root.querySelector('#last-used-model-name');
+            const timeElement = root.querySelector('#last-used-model-time');
+            
+            if (!displayElement || !nameElement || !timeElement) {
+                return;
+            }
+            
+            const lastUsedModel = localStorage.getItem('orr_last_used_model');
+            const lastUsedTime = localStorage.getItem('orr_last_used_time');
+            
+            if (lastUsedModel && lastUsedTime) {
+                const time = new Date(parseInt(lastUsedTime));
+                const timeAgo = getTimeAgo(time);
+                
+                nameElement.textContent = lastUsedModel;
+                timeElement.textContent = `Used ${timeAgo}`;
+                displayElement.style.display = 'block';
+            } else {
+                displayElement.style.display = 'none';
+            }
+        }
+        
+        // Helper function to format time ago
+        function getTimeAgo(date) {
+            const now = new Date();
+            const diffMs = now - date;
+            const diffSecs = Math.floor(diffMs / 1000);
+            const diffMins = Math.floor(diffSecs / 60);
+            const diffHours = Math.floor(diffMins / 60);
+            const diffDays = Math.floor(diffHours / 24);
+            
+            if (diffSecs < 60) {
+                return 'just now';
+            } else if (diffMins < 60) {
+                return `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`;
+            } else if (diffHours < 24) {
+                return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+            } else {
+                return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+            }
+        }
+        
+        // Function to update the blocked models display
+        function updateBlockedModelsDisplay(root) {
+            const blockedInfo = root.querySelector('#blocked-models-info');
+            const blockedList = root.querySelector('#blocked-models-list');
+            
+            if (!blockedInfo || !blockedList) {
+                return;
+            }
+            
+            const blocked = getBlockedModels();
+            
+            if (blocked.length > 0) {
+                const shortNames = blocked.map(model => {
+                    // Shorten model names for display
+                    const parts = model.split('/');
+                    return parts.length > 1 ? parts[parts.length - 1] : model;
+                }).slice(0, 3); // Show max 3 models
+                
+                let displayText = shortNames.join(', ');
+                if (blocked.length > 3) {
+                    displayText += ` (+${blocked.length - 3} more)`;
+                }
+                
+                blockedList.textContent = displayText;
+                blockedInfo.style.display = 'block';
+            } else {
+                blockedInfo.style.display = 'none';
+            }
+        }
+
         // Core randomization function
         function getRandomModel() {
             const selectedModels = getSaved();
@@ -325,8 +533,17 @@ const MODULE_NAME = 'openrouter-randomizer';
                 return null;
             }
             
-            const randomIndex = Math.floor(Math.random() * selectedModels.length);
-            return selectedModels[randomIndex];
+            // Filter out blocked models
+            const blockedModels = getBlockedModels();
+            const availableModels = selectedModels.filter(model => !blockedModels.includes(model));
+            
+            if (availableModels.length === 0) {
+                console.warn(`[${MODULE_NAME}] All selected models are blocked`);
+                return null;
+            }
+            
+            const randomIndex = Math.floor(Math.random() * availableModels.length);
+            return availableModels[randomIndex];
         }
 
         // Function to trigger randomization and update SillyTavern's model selection
@@ -393,11 +610,15 @@ const MODULE_NAME = 'openrouter-randomizer';
                 const chosen = JSON.parse(localStorage.getItem(KEY) || '[]');
                 const pool = chosen.length ? chosen : JSON.parse(localStorage.getItem('orr_all')||'[]');
                 
-                if (!pool.length) {
+                // Filter out blocked models
+                const blockedModels = getBlockedModels();
+                const availablePool = pool.filter(model => !blockedModels.includes(model));
+                
+                if (!availablePool.length) {
                     return;
                 }
 
-                const pick = pool[Math.floor(Math.random() * pool.length)];
+                const pick = availablePool[Math.floor(Math.random() * availablePool.length)];
                 
                 // Store the randomized model for API interception
                 window.openrouterRandomizerModel = pick;
@@ -445,6 +666,10 @@ const MODULE_NAME = 'openrouter-randomizer';
                                 options.body = JSON.stringify(body);
                                 args[1] = options;
                                 
+                                // Store the model that was actually used for this request
+                                localStorage.setItem('orr_last_used_model', randomizedModel);
+                                localStorage.setItem('orr_last_used_time', Date.now().toString());
+                                
                                 
                             } catch (e) {
                                 // Return original request if modification fails
@@ -468,9 +693,12 @@ const MODULE_NAME = 'openrouter-randomizer';
                         const pool = chosen.length ? chosen : JSON.parse(allRaw);
                         
                         const failedModel = window.openrouterRandomizerModel;
+                        const blockedModels = getBlockedModels();
                         
-                        // Filter out the failed model and try others
-                        const availableModels = pool.filter(model => model !== failedModel);
+                        // Filter out the failed model, blocked models, and try others
+                        const availableModels = pool.filter(model => 
+                            model !== failedModel && !blockedModels.includes(model)
+                        );
                         
                         // Try up to 3 different models
                         for (let attempt = 0; attempt < Math.min(3, availableModels.length); attempt++) {
@@ -492,6 +720,9 @@ const MODULE_NAME = 'openrouter-randomizer';
                                     // Try the request with the new model
                                     const retryResponse = await originalFetch(url, retryOptions);
                                     
+                                    // If successful, store this model as the last used
+                                    localStorage.setItem('orr_last_used_model', retryModel);
+                                    localStorage.setItem('orr_last_used_time', Date.now().toString());
                                     
                                     return retryResponse;
                                 }
@@ -660,6 +891,9 @@ const MODULE_NAME = 'openrouter-randomizer';
         
         // Set up automatic randomization on generation using send button hook
         setupAutoRandomization();
+        
+        // Set up randomization on alternative response (arrow) button clicks
+        setupSwipeRandomization();
 
         function setupAutoRandomization() {
             // Try multiple possible send button selectors
@@ -711,12 +945,16 @@ const MODULE_NAME = 'openrouter-randomizer';
                     const chosen = JSON.parse(chosenRaw);
                     const pool = chosen.length ? chosen : JSON.parse(allRaw);
                     
-                    if (!pool.length) {
+                    // Filter out blocked models
+                    const blockedModels = getBlockedModels();
+                    const availablePool = pool.filter(model => !blockedModels.includes(model));
+                    
+                    if (!availablePool.length) {
                         handlerRunning = false;
                         return;
                     }
                     
-                    const pick = pool[Math.floor(Math.random() * pool.length)];
+                    const pick = availablePool[Math.floor(Math.random() * availablePool.length)];
                     
                     // Store the selected model for API interception
                     window.openrouterRandomizerModel = pick;
@@ -759,7 +997,125 @@ const MODULE_NAME = 'openrouter-randomizer';
             }
         }
 
+        function setupSwipeRandomization() {
+            // Try multiple possible arrow/swipe button selectors
+            const swipeButtonSelectors = [
+                '.swipe_right',
+                '.swipe_left', 
+                '[title*="alternative"]',
+                '[title*="swipe"]',
+                '[title*="retry"]',
+                '.mes_button[title*="Get alternative response"]',
+                '.mes_button[title*="Swipe"]',
+                'button[title*="alternative"]',
+                'button[title*="swipe"]',
+                '.fa-arrow-right',
+                '.fa-arrow-left',
+                '.fa-chevron-right',
+                '.fa-chevron-left',
+                'button:has(.fa-arrow-right)',
+                'button:has(.fa-arrow-left)',
+                'button:has(.fa-chevron-right)',
+                'button:has(.fa-chevron-left)'
+            ];
+            
+            // Function to set up event listeners on swipe buttons
+            const setupSwipeButtons = () => {
+                swipeButtonSelectors.forEach(selector => {
+                    try {
+                        const buttons = document.querySelectorAll(selector);
+                        buttons.forEach(button => {
+                            if (!button.hasAttribute('data-orr-swipe-hooked')) {
+                                button.setAttribute('data-orr-swipe-hooked', 'true');
+                                
+                                const swipeHandler = () => {
+                                    // Access settings directly
+                                    const globalSettings = window.extension_settings || {};
+                                    const settings = globalSettings['openrouter-randomizer'] || {};
+                                    
+                                    if (!settings.randomizeModels) {
+                                        return;
+                                    }
+                                    
+                                    // Get models from localStorage
+                                    const chosenRaw = localStorage.getItem('orr_selected') || '[]';
+                                    const allRaw = localStorage.getItem('orr_all') || '[]';
+                                    
+                                    const chosen = JSON.parse(chosenRaw);
+                                    const pool = chosen.length ? chosen : JSON.parse(allRaw);
+                                    
+                                    // Filter out blocked models
+                                    const blockedModels = getBlockedModels();
+                                    const availablePool = pool.filter(model => !blockedModels.includes(model));
+                                    
+                                    if (!availablePool.length) {
+                                        return;
+                                    }
+                                    
+                                    const pick = availablePool[Math.floor(Math.random() * availablePool.length)];
+                                    
+                                    // Store the selected model for API interception
+                                    window.openrouterRandomizerModel = pick;
+                                };
+                                
+                                // Add event listeners for various interaction types
+                                button.addEventListener('click', swipeHandler, true);
+                                button.addEventListener('mousedown', swipeHandler, true);
+                                button.addEventListener('touchstart', swipeHandler, true);
+                            }
+                        });
+                    } catch (e) {
+                        // Ignore selector errors (some might not be valid CSS)
+                    }
+                });
+            };
+            
+            // Set up initial buttons
+            setupSwipeButtons();
+            
+            // Set up a mutation observer to catch dynamically added swipe buttons
+            const observer = new MutationObserver((mutations) => {
+                let shouldSetup = false;
+                mutations.forEach(mutation => {
+                    if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                        mutation.addedNodes.forEach(node => {
+                            if (node.nodeType === Node.ELEMENT_NODE) {
+                                // Check if the added node or its children contain swipe buttons
+                                const hasSwipeButton = swipeButtonSelectors.some(selector => {
+                                    try {
+                                        return node.matches && node.matches(selector) || 
+                                               node.querySelector && node.querySelector(selector);
+                                    } catch (e) {
+                                        return false;
+                                    }
+                                });
+                                if (hasSwipeButton) {
+                                    shouldSetup = true;
+                                }
+                            }
+                        });
+                    }
+                });
+                
+                if (shouldSetup) {
+                    // Debounce the setup call
+                    setTimeout(setupSwipeButtons, 100);
+                }
+            });
+            
+            // Start observing
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+        }
+
     } catch (error) {
         // Silent error handling
+    } finally {
+        // Restore original console.warn
+        if (typeof originalWarn === 'function') {
+            console.warn = originalWarn;
+        }
     }
 })();

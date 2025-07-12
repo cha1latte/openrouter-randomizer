@@ -17,6 +17,26 @@
                 <small class="notes">Uses your OpenRouter API key from API Connections settings.</small>
             </div>
             
+            <div class="openrouter-settings-group">
+                <div id="last-used-model-display" style="background: var(--SmartThemeBlurTintColor, rgba(0, 0, 0, 0.05)); border-radius: 4px; padding: 8px; margin: 10px 0; display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div style="flex: 1;">
+                            <strong>Last Used Model:</strong>
+                            <span id="last-used-model-name" style="color: var(--SmartThemeEmColor, #4c9eff); margin-left: 8px;">None</span>
+                            <br>
+                            <small id="last-used-model-time" style="color: var(--SmartThemeQuoteColor, #888); margin-top: 4px; display: block;">Never used</small>
+                        </div>
+                        <button id="block-last-model-btn" class="menu_button" style="margin-left: 10px; font-size: 12px; padding: 4px 8px;" title="Block this model from future selections">Block</button>
+                    </div>
+                    <div id="blocked-models-info" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--SmartThemeBorderColor, #444); display: none;">
+                        <small style="color: var(--SmartThemeQuoteColor, #888);">
+                            <strong>Blocked models:</strong> <span id="blocked-models-list">None</span>
+                        </small>
+                        <button id="clear-blocked-btn" class="menu_button" style="font-size: 11px; padding: 2px 6px; margin-left: 8px;" title="Clear all blocked models">Clear All</button>
+                    </div>
+                </div>
+            </div>
+            
             <div class="openrouter-models-section">
                 <h4>Available Models</h4>
                 <div class="model-controls" style="margin-bottom: 10px; display: none;">
@@ -27,6 +47,7 @@
                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                         <button id="select-all-btn" class="menu_button">Select All</button>
                         <button id="deselect-all-btn" class="menu_button">Deselect All</button>
+                        <button id="select-free-btn" class="menu_button" title="Select only free models">Select Free Only</button>
                     </div>
                 </div>
                 <div id="model-list-container" class="model-list-container">

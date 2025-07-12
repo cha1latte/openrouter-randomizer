@@ -103,17 +103,21 @@
 
 /* Remove old dark theme overrides since we're using the same vars as text inputs */
 
-/* Cost-based highlighting */
+/* Cost-based highlighting with better fallbacks */
 .model-item[data-cost-tier="expensive"] strong {
-    color: var(--SmartThemeEmColor, #ff6b6b);
+    color: var(--red, var(--SmartThemeEmColor, #ff6b6b));
+    font-weight: bold;
 }
 
 .model-item[data-cost-tier="free"] strong {
-    color: var(--SmartThemeQuoteColor, #51cf66);
+    color: var(--green, var(--SmartThemeQuoteColor, #51cf66)) !important;
+    font-weight: bold;
+    text-shadow: 0 0 1px currentColor;
 }
 
 .model-item[data-cost-tier="cheap"] strong {
-    color: var(--SmartThemeEmColor, #4c9eff);
+    color: var(--blue, var(--SmartThemeEmColor, #4c9eff));
+    font-weight: bold;
 }
 
 /* Search input enhancements */

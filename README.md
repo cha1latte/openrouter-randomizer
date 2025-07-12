@@ -5,6 +5,7 @@ A SillyTavern extension that automatically randomizes OpenRouter AI models for e
 ## Features
 
 - **Automatic Model Randomization**: Randomly selects from your chosen models for each generation
+- **Arrow Button Randomization**: Changes model when clicking arrow buttons to get alternative responses
 - **Smart Model Selection**: Choose specific models or let it use all available models as fallback
 - **Search & Filter**: Easily find and select models with search functionality
 - **Model Information Display**: Shows context length and pricing information for each model
@@ -27,7 +28,7 @@ A SillyTavern extension that automatically randomizes OpenRouter AI models for e
 
 1. **Enable the Extension**: Check "Enable OpenRouter Model Randomizer" in the extension settings
 2. **Select Models**: The extension will automatically fetch available models. Use the search box to filter and select your preferred models
-3. **Start Chatting**: The extension will automatically randomize between your selected models for each message
+3. **Start Chatting**: The extension will automatically randomize between your selected models for each message and when clicking arrow buttons for alternative responses
 
 ## How It Works
 
