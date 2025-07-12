@@ -310,28 +310,6 @@ const MODULE_NAME = 'openrouter-randomizer';
                 });
             }
 
-            // Wire up the select free only button
-            const selectFreeBtn = root.querySelector('#select-free-btn');
-            if (selectFreeBtn) {
-                selectFreeBtn.addEventListener('click', () => {
-                    const container = root.querySelector('#model-list-container');
-                    const visibleItems = container.querySelectorAll('.model-item:not([style*="display: none"])');
-                    
-                    visibleItems.forEach(item => {
-                        const checkbox = item.querySelector('input[type="checkbox"]');
-                        if (checkbox) {
-                            // Check if this model is free (has data-cost-tier="free")
-                            const isFree = item.getAttribute('data-cost-tier') === 'free';
-                            checkbox.checked = isFree;
-                        }
-                    });
-                    
-                    // Trigger change event to save selections
-                    if (container.onchange) {
-                        container.onchange();
-                    }
-                });
-            }
 
             // Wire up the select favorites button
             const selectFavoritesBtn = root.querySelector('#select-favorites-btn');
