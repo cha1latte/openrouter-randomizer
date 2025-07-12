@@ -120,6 +120,33 @@
     font-weight: bold;
 }
 
+/* Favorite star button styling */
+.favorite-star {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px 8px;
+    margin-left: 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    color: var(--SmartThemeQuoteColor, #888);
+}
+
+.favorite-star:hover {
+    background-color: var(--SmartThemeBlurTintColor, rgba(0, 0, 0, 0.1));
+    transform: scale(1.1);
+}
+
+.favorite-star.favorited {
+    color: var(--yellow, #ffd700);
+    text-shadow: 0 0 2px currentColor;
+}
+
+.favorite-star.favorited:hover {
+    color: var(--yellow, #ffed4e);
+}
+
 /* Search input enhancements */
 #model-search {
     transition: border-color 0.2s ease, box-shadow 0.2s ease;

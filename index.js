@@ -333,6 +333,37 @@ const MODULE_NAME = 'openrouter-randomizer';
                 });
             }
 
+            // Wire up the select favorites button
+            const selectFavoritesBtn = root.querySelector('#select-favorites-btn');
+            if (selectFavoritesBtn) {
+                selectFavoritesBtn.addEventListener('click', () => {
+                    const container = root.querySelector('#model-list-container');
+                    const visibleItems = container.querySelectorAll('.model-item:not([style*="display: none"])');
+                    const favorites = getFavorites();
+                    
+                    visibleItems.forEach(item => {
+                        const checkbox = item.querySelector('input[type="checkbox"]');
+                        if (checkbox) {
+                            const modelId = checkbox.dataset.model;
+                            checkbox.checked = favorites.includes(modelId);
+                        }
+                    });
+                    
+                    // Trigger change event to save selections
+                    if (container.onchange) {
+                        container.onchange();
+                    }
+                    
+                    // Show notification
+                    const favCount = favorites.length;
+                    if (favCount > 0) {
+                        showNotification(`Selected ${favCount} favorite model${favCount === 1 ? '' : 's'}`);
+                    } else {
+                        showNotification('No favorite models found. Star some models first!');
+                    }
+                });
+            }
+
 
 
         }
@@ -410,6 +441,30 @@ const MODULE_NAME = 'openrouter-randomizer';
         }
         function save(ids) {
             localStorage.setItem(KEY, JSON.stringify(ids));
+        }
+
+        // Storage helpers for favorite models
+        const FAVORITES_KEY = 'orr_favorites';
+        function getFavorites() {
+            return JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]');
+        }
+        function addFavorite(modelId) {
+            const favorites = getFavorites();
+            if (!favorites.includes(modelId)) {
+                favorites.push(modelId);
+                localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+            }
+        }
+        function removeFavorite(modelId) {
+            const favorites = getFavorites();
+            const index = favorites.indexOf(modelId);
+            if (index > -1) {
+                favorites.splice(index, 1);
+                localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+            }
+        }
+        function isFavorite(modelId) {
+            return getFavorites().includes(modelId);
         }
 
         // Helper function to show notifications if enabled
@@ -745,9 +800,39 @@ const MODULE_NAME = 'openrouter-randomizer';
                 costText.textContent = costDisplay;
                 modelNameSpan.appendChild(costText);
                 
-                // Append checkbox and model name to label
+                // Create favorite star button
+                const starButton = document.createElement('button');
+                starButton.className = 'favorite-star';
+                starButton.textContent = isFavorite(modelId) ? '★' : '☆';
+                starButton.title = isFavorite(modelId) ? 'Remove from favorites' : 'Add to favorites';
+                starButton.type = 'button';
+                
+                if (isFavorite(modelId)) {
+                    starButton.classList.add('favorited');
+                }
+                
+                starButton.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent label click
+                    
+                    if (isFavorite(modelId)) {
+                        removeFavorite(modelId);
+                        starButton.textContent = '☆';
+                        starButton.title = 'Add to favorites';
+                        starButton.classList.remove('favorited');
+                        showNotification(`Removed ${modelName} from favorites`);
+                    } else {
+                        addFavorite(modelId);
+                        starButton.textContent = '★';
+                        starButton.title = 'Remove from favorites';
+                        starButton.classList.add('favorited');
+                        showNotification(`Added ${modelName} to favorites`);
+                    }
+                });
+                
+                // Append checkbox, model name, and star to label
                 label.appendChild(checkbox);
                 label.appendChild(modelNameSpan);
+                label.appendChild(starButton);
                 
                 // Append label to container
                 modelDiv.appendChild(label);
