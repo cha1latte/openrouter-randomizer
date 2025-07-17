@@ -468,8 +468,7 @@ const MODULE_NAME = 'openrouter-randomizer';
 
         // Function to trigger randomization and update SillyTavern's model selection
         function triggerRandomization() {
-            const globalSettings = window.extension_settings || {};
-            const settings = globalSettings[MODULE_NAME] || {};
+            const settings = loadSettings();
             
             // Check if randomization is enabled
             if (!settings.randomizeModels) {
@@ -866,9 +865,8 @@ const MODULE_NAME = 'openrouter-randomizer';
                     }
                     handlerRunning = true;
                     
-                    // Access settings directly with hardcoded module name
-                    const globalSettings = window.extension_settings || {};
-                    const settings = globalSettings['openrouter-randomizer'] || {};
+                    // Load settings using consistent function
+                    const settings = loadSettings();
                     
                     if (!settings.randomizeModels) {
                         handlerRunning = false;
@@ -962,9 +960,8 @@ const MODULE_NAME = 'openrouter-randomizer';
                                 button.setAttribute('data-orr-swipe-hooked', 'true');
                                 
                                 const swipeHandler = () => {
-                                    // Access settings directly
-                                    const globalSettings = window.extension_settings || {};
-                                    const settings = globalSettings['openrouter-randomizer'] || {};
+                                    // Load settings using consistent function
+                                    const settings = loadSettings();
                                     
                                     if (!settings.randomizeModels) {
                                         return;
