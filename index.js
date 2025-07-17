@@ -657,6 +657,24 @@ const MODULE_NAME = 'openrouter-randomizer';
             console.log(`[${MODULE_NAME}] Fetch interceptor set up`);
         }
 
+        // Default models to select on first install (free models only)
+        const DEFAULT_SELECTED_MODELS = [
+            'deepseek/deepseek-v3',
+            'deepseek/deepseek-v3-0324',
+            'deepseek/deepseek-r1',
+            'deepseek/deepseek-r1-0528',
+            'deepseek/deepseek-r1-distill-llama-70b',
+            'mistralai/mistral-nemo',
+            'mistralai/mistral-small-3.2-24b',
+            'qwen/qwen2.5-vl-72b-instruct',
+            'qwen/qwen3-32b',
+            'qwen/qwq-32b',
+            'qwen/qwen2.5-72b-instruct',
+            'tencent/hunyuan-a13b-instruct',
+            'tng/deepseek-r1t2-chimera',
+            'venice/venice-uncensored'
+        ];
+
         // Helper function to populate model checkboxes in the UI
         function populateModelCheckboxes(models, settings, root) {
             const container = root.querySelector('#model-list-container');
@@ -676,6 +694,10 @@ const MODULE_NAME = 'openrouter-randomizer';
             
             // Get saved selections
             const saved = new Set(getSaved());
+            
+            // Check if this is a first-time installation (no saved selections)
+            const isFirstTime = saved.size === 0;
+            const defaultSelectedSet = new Set(DEFAULT_SELECTED_MODELS);
             
             // Create a checkbox for each model
             for (const model of models) {
@@ -709,8 +731,12 @@ const MODULE_NAME = 'openrouter-randomizer';
                 checkbox.id = `chk-${modelId.replace(/[^a-zA-Z0-9]/g, '_')}`;
                 checkbox.dataset.model = modelId;
                 
-                // Set initial checked state - if no saved selections, check all by default
-                checkbox.checked = saved.size ? saved.has(modelId) : true;
+                // Set initial checked state - use defaults for first-time installation
+                if (isFirstTime) {
+                    checkbox.checked = defaultSelectedSet.has(modelId);
+                } else {
+                    checkbox.checked = saved.has(modelId);
+                }
                 
                 // Create a label for the checkbox
                 const label = document.createElement('label');
@@ -814,6 +840,16 @@ const MODULE_NAME = 'openrouter-randomizer';
                 // Append label to container
                 modelDiv.appendChild(label);
                 container.appendChild(modelDiv);
+            }
+            
+            // Save default selections on first-time installation
+            if (isFirstTime) {
+                const availableDefaults = models
+                    .filter(model => defaultSelectedSet.has(model.id))
+                    .map(model => model.id);
+                if (availableDefaults.length > 0) {
+                    save(availableDefaults);
+                }
             }
             
             // Add one delegated listener to update storage whenever any box is (un)checked
