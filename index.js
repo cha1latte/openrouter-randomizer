@@ -158,10 +158,14 @@ const MODULE_NAME = 'openrouter-randomizer';
                 randomizeCheckbox.checked = !!settings.randomizeModels;
                 
                 randomizeCheckbox.addEventListener('change', () => {
-                    settings.randomizeModels = randomizeCheckbox.checked;
+                    // Load fresh settings to ensure we have the latest state
+                    const currentSettings = loadSettings();
+                    currentSettings.randomizeModels = randomizeCheckbox.checked;
+                    
+                    console.log(`[${MODULE_NAME}] Randomizer toggle changed to:`, randomizeCheckbox.checked);
                     
                     // Save using our localStorage function
-                    saveSettings(settings);
+                    saveSettings(currentSettings);
                     
                     // Also try SillyTavern's saveSettingsDebounced if available
                     if (typeof saveSettingsDebounced === 'function') {
@@ -170,6 +174,9 @@ const MODULE_NAME = 'openrouter-randomizer';
                     if (typeof window.saveSettingsDebounced === 'function') {
                         window.saveSettingsDebounced();
                     }
+                    
+                    // Update the local settings object for consistency
+                    settings = currentSettings;
                 });
             }
 
@@ -471,7 +478,9 @@ const MODULE_NAME = 'openrouter-randomizer';
             const settings = loadSettings();
             
             // Check if randomization is enabled
+            console.log(`[${MODULE_NAME}] triggerRandomization() - randomizeModels:`, settings.randomizeModels);
             if (!settings.randomizeModels) {
+                console.log(`[${MODULE_NAME}] triggerRandomization() - randomization disabled, returning`);
                 return;
             }
             
@@ -519,7 +528,9 @@ const MODULE_NAME = 'openrouter-randomizer';
                 const settings = loadSettings();
                 
                 // Only intercept if randomization is enabled
+                console.log(`[${MODULE_NAME}] generateInterceptor() - randomizeModels:`, settings.randomizeModels);
                 if (!settings.randomizeModels) {
+                    console.log(`[${MODULE_NAME}] generateInterceptor() - randomization disabled, returning`);
                     return;
                 }
                 
@@ -904,7 +915,9 @@ const MODULE_NAME = 'openrouter-randomizer';
                     // Load settings using consistent function
                     const settings = loadSettings();
                     
+                    console.log(`[${MODULE_NAME}] setupAutoRandomization() - randomizeModels:`, settings.randomizeModels);
                     if (!settings.randomizeModels) {
+                        console.log(`[${MODULE_NAME}] setupAutoRandomization() - randomization disabled, returning`);
                         handlerRunning = false;
                         return;
                     }
@@ -999,7 +1012,9 @@ const MODULE_NAME = 'openrouter-randomizer';
                                     // Load settings using consistent function
                                     const settings = loadSettings();
                                     
+                                    console.log(`[${MODULE_NAME}] setupSwipeRandomization() - randomizeModels:`, settings.randomizeModels);
                                     if (!settings.randomizeModels) {
+                                        console.log(`[${MODULE_NAME}] setupSwipeRandomization() - randomization disabled, returning`);
                                         return;
                                     }
                                     
