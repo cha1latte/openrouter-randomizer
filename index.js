@@ -151,11 +151,15 @@ const MODULE_NAME = 'openrouter-randomizer';
         function setupUI(root) {
             // Load current settings
             let settings = loadSettings();
+            console.log(`[${MODULE_NAME}] setupUI() - Initial settings:`, settings);
+            console.log(`[${MODULE_NAME}] setupUI() - randomizeModels:`, settings.randomizeModels);
+            console.log(`[${MODULE_NAME}] setupUI() - typeof randomizeModels:`, typeof settings.randomizeModels);
 
             // Wire up the main toggle checkbox
             const randomizeCheckbox = root.querySelector('#openrouter-randomizer-enabled');
             if (randomizeCheckbox) {
                 randomizeCheckbox.checked = !!settings.randomizeModels;
+                console.log(`[${MODULE_NAME}] setupUI() - Checkbox set to:`, randomizeCheckbox.checked);
                 
                 randomizeCheckbox.addEventListener('change', () => {
                     // Load fresh settings to ensure we have the latest state
@@ -163,9 +167,21 @@ const MODULE_NAME = 'openrouter-randomizer';
                     currentSettings.randomizeModels = randomizeCheckbox.checked;
                     
                     console.log(`[${MODULE_NAME}] Randomizer toggle changed to:`, randomizeCheckbox.checked);
+                    console.log(`[${MODULE_NAME}] Current settings before save:`, currentSettings);
+                    
+                    // Clear the randomized model when disabling
+                    if (!randomizeCheckbox.checked) {
+                        window.openrouterRandomizerModel = null;
+                        console.log(`[${MODULE_NAME}] Cleared randomized model`);
+                    }
                     
                     // Save using our localStorage function
                     saveSettings(currentSettings);
+                    
+                    // Verify the save worked
+                    const verifySettings = loadSettings();
+                    console.log(`[${MODULE_NAME}] Settings after save:`, verifySettings);
+                    console.log(`[${MODULE_NAME}] randomizeModels value:`, verifySettings.randomizeModels);
                     
                     // Also try SillyTavern's saveSettingsDebounced if available
                     if (typeof saveSettingsDebounced === 'function') {
@@ -478,7 +494,9 @@ const MODULE_NAME = 'openrouter-randomizer';
             const settings = loadSettings();
             
             // Check if randomization is enabled
+            console.log(`[${MODULE_NAME}] triggerRandomization() - Full settings:`, settings);
             console.log(`[${MODULE_NAME}] triggerRandomization() - randomizeModels:`, settings.randomizeModels);
+            console.log(`[${MODULE_NAME}] triggerRandomization() - typeof randomizeModels:`, typeof settings.randomizeModels);
             if (!settings.randomizeModels) {
                 console.log(`[${MODULE_NAME}] triggerRandomization() - randomization disabled, returning`);
                 return;
@@ -528,7 +546,9 @@ const MODULE_NAME = 'openrouter-randomizer';
                 const settings = loadSettings();
                 
                 // Only intercept if randomization is enabled
+                console.log(`[${MODULE_NAME}] generateInterceptor() - Full settings:`, settings);
                 console.log(`[${MODULE_NAME}] generateInterceptor() - randomizeModels:`, settings.randomizeModels);
+                console.log(`[${MODULE_NAME}] generateInterceptor() - typeof randomizeModels:`, typeof settings.randomizeModels);
                 if (!settings.randomizeModels) {
                     console.log(`[${MODULE_NAME}] generateInterceptor() - randomization disabled, returning`);
                     return;
@@ -570,6 +590,13 @@ const MODULE_NAME = 'openrouter-randomizer';
                      url.includes('/chat/completions') ||
                      url.includes('api.openai.com') ||
                      url.includes('/api/backends/chat-completions/generate'))) {
+                    
+                    // Check if randomization is enabled
+                    const settings = loadSettings();
+                    if (!settings.randomizeModels) {
+                        console.log(`[${MODULE_NAME}] Fetch interceptor - randomization disabled, skipping`);
+                        return originalFetch.apply(this, args);
+                    }
                     
                     // Get the current randomized model from our storage
                     const randomizedModel = window.openrouterRandomizerModel;
